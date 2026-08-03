@@ -1,22 +1,91 @@
 <template>
-  <a
-    :href="link.url"
-    target="_blank"
-    rel="noopener noreferrer"
+  <article
+    ref="cardEl"
     class="card"
+    tabindex="0"
+    role="link"
+    :aria-label="link.name + '（新标签页打开）'"
+    :style="{ '--cc': link.color, '--rx': rx, '--ry': ry }"
+    @click="openLink"
+    @keydown.enter="openLink"
+    @mousemove="onTilt"
+    @mouseleave="resetTilt"
   >
     <span class="sweep"></span>
-    <div class="icon-wrap">
-      <i :class="link.icon"></i>
+    <div class="top-row">
+      <div class="icon-wrap">
+        <i :class="link.icon"></i>
+      </div>
+      <button
+        type="button"
+        class="fav"
+        :class="{ on: fav }"
+        :aria-label="fav ? '取消收藏' : '收藏'"
+        :title="fav ? '取消收藏' : '收藏'"
+        @click.stop="toggleFav(link.url)"
+      >
+        <i :class="fav ? 'fas fa-star' : 'far fa-star'"></i>
+      </button>
     </div>
     <div class="name">{{ link.name }}</div>
     <div class="desc">{{ link.desc }}</div>
-    <div v-if="link.tag" class="tag"># {{ link.tag }}</div>
-  </a>
+    <button
+      v-if="link.tag"
+      type="button"
+      class="tag"
+      @click.stop="$emit('tag', link.tag)"
+    >
+      # {{ link.tag }}
+    </button>
+  </article>
 </template>
 
 <script setup>
-defineProps({ link: { type: Object, required: true } })
+import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { useFavorites } from '../composables/useFavorites.js'
+
+const props = defineProps({ link: { type: Object, required: true } })
+defineEmits(['tag'])
+
+const { isFav, toggleFav } = useFavorites()
+const fav = computed(() => isFav(props.link.url))
+
+function openLink() {
+  window.open(props.link.url, '_blank', 'noopener,noreferrer')
+}
+
+const cardEl = ref(null)
+const rx = ref('0deg')
+const ry = ref('0deg')
+let tiltRaf = null
+let tiltEnabled = true
+
+function onTilt(e) {
+  if (!tiltEnabled) return
+  if (tiltRaf) cancelAnimationFrame(tiltRaf)
+  tiltRaf = requestAnimationFrame(() => {
+    const el = cardEl.value
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    const px = (e.clientX - r.left) / r.width - 0.5
+    const py = (e.clientY - r.top) / r.height - 0.5
+    ry.value = (px * 12).toFixed(2) + 'deg'
+    rx.value = (-py * 12).toFixed(2) + 'deg'
+  })
+}
+
+function resetTilt() {
+  if (tiltRaf) cancelAnimationFrame(tiltRaf)
+  rx.value = '0deg'
+  ry.value = '0deg'
+}
+
+onMounted(() => {
+  tiltEnabled = !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+})
+onUnmounted(() => {
+  if (tiltRaf) cancelAnimationFrame(tiltRaf)
+})
 </script>
 
 <style scoped>
@@ -25,19 +94,31 @@ defineProps({ link: { type: Object, required: true } })
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 18px 16px 14px;
+  padding: 16px 16px 14px;
   background: linear-gradient(160deg, rgba(13, 18, 38, 0.85), rgba(7, 7, 19, 0.9));
-  border: 1px solid rgba(5, 217, 232, 0.18);
+  border: 1px solid color-mix(in srgb, var(--cc, #05d9e8) 25%, transparent);
   border-radius: 10px;
   overflow: hidden;
-  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  cursor: pointer;
+  transform: translateY(var(--ty, 0)) perspective(800px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transform-style: preserve-3d;
+  transition: transform 0.18s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  will-change: transform;
 }
 .card:hover {
-  transform: translateY(-6px);
-  border-color: var(--neon-cyan);
+  --ty: -6px;
+  border-color: var(--cc, var(--neon-cyan));
   box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.5),
-    0 0 18px rgba(5, 217, 232, 0.35);
+    0 12px 30px rgba(0, 0, 0, 0.55),
+    0 0 22px color-mix(in srgb, var(--cc, #05d9e8) 50%, transparent);
+}
+.card:focus-visible {
+  outline: none;
+  border-color: var(--cc, var(--neon-cyan));
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--cc, #05d9e8) 60%, transparent),
+    0 12px 30px rgba(0, 0, 0, 0.55),
+    0 0 22px color-mix(in srgb, var(--cc, #05d9e8) 50%, transparent);
 }
 .sweep {
   position: absolute;
@@ -48,7 +129,7 @@ defineProps({ link: { type: Object, required: true } })
   background: linear-gradient(
     100deg,
     transparent,
-    rgba(5, 217, 232, 0.18),
+    color-mix(in srgb, var(--cc, #05d9e8) 22%, transparent),
     transparent
   );
   transform: skewX(-20deg);
@@ -58,6 +139,11 @@ defineProps({ link: { type: Object, required: true } })
 .card:hover .sweep {
   left: 130%;
 }
+.top-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
 .icon-wrap {
   width: 42px;
   height: 42px;
@@ -65,17 +151,45 @@ defineProps({ link: { type: Object, required: true } })
   align-items: center;
   justify-content: center;
   border-radius: 10px;
-  background: rgba(5, 217, 232, 0.08);
-  border: 1px solid rgba(5, 217, 232, 0.25);
-  color: var(--neon-cyan);
+  background: color-mix(in srgb, var(--cc, #05d9e8) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cc, #05d9e8) 32%, transparent);
+  color: var(--cc, var(--neon-cyan));
   font-size: 18px;
-  transition: all 0.25s ease;
+  transition: transform 0.25s ease, background 0.25s ease, border-color 0.25s ease;
 }
 .card:hover .icon-wrap {
-  background: rgba(255, 42, 109, 0.12);
-  border-color: var(--neon-pink);
-  color: var(--neon-pink);
   transform: scale(1.08);
+  background: color-mix(in srgb, var(--cc, #05d9e8) 22%, transparent);
+  border-color: var(--cc, var(--neon-cyan));
+}
+.fav {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 14px;
+  cursor: pointer;
+  opacity: 0.55;
+  transition: all 0.2s ease;
+}
+.card:hover .fav {
+  opacity: 1;
+}
+.fav:hover {
+  color: var(--neon-yellow);
+  border-color: rgba(249, 240, 2, 0.4);
+  background: rgba(249, 240, 2, 0.08);
+}
+.fav.on {
+  opacity: 1;
+  color: var(--neon-yellow);
+  text-shadow: 0 0 8px rgba(249, 240, 2, 0.7);
 }
 .name {
   font-family: var(--font-body);
@@ -95,9 +209,22 @@ defineProps({ link: { type: Object, required: true } })
 }
 .tag {
   margin-top: auto;
+  align-self: flex-start;
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--neon-yellow);
   opacity: 0.85;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 2px 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.tag:hover {
+  opacity: 1;
+  color: #000;
+  background: var(--neon-yellow);
+  box-shadow: 0 0 8px rgba(249, 240, 2, 0.5);
 }
 </style>

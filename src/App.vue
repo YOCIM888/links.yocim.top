@@ -1,5 +1,10 @@
 <template>
   <CyberBackground />
+  <CategoryRail
+    :categories="categories"
+    :active="activeCat"
+    @jump="jumpTo"
+  />
   <main>
     <HeroSection
       :sector-count="categories.length"
@@ -26,10 +31,18 @@
     </div>
     <div v-else-if="error" class="error">ERROR: {{ error }}</div>
     <template v-else>
+      <FavoritesSection :all-links="allLinks" @tag="onTag" />
+      <TagFilterBar
+        :tag="activeTag"
+        :count="filteredCount"
+        @clear="clearTag"
+      />
       <CategorySection
         v-for="cat in categories"
         :key="cat.id"
         :cat="cat"
+        :active-tag="activeTag"
+        @tag="onTag"
       />
     </template>
 
@@ -39,26 +52,57 @@
     </footer>
   </main>
 
+  <ShortcutsHelp :show="showHelp" @close="showHelp = false" />
+  <button
+    type="button"
+    class="help-btn"
+    aria-label="快捷键帮助"
+    title="快捷键 (?)"
+    @click="showHelp = !showHelp"
+  >
+    <i class="fas fa-keyboard"></i>
+  </button>
+  <ThemeSwitch />
   <BackToTop />
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import CyberBackground from './components/CyberBackground.vue'
 import HeroSection from './components/HeroSection.vue'
 import SearchBar from './components/SearchBar.vue'
 import CategoryTabs from './components/CategoryTabs.vue'
+import CategoryRail from './components/CategoryRail.vue'
 import CategorySection from './components/CategorySection.vue'
+import FavoritesSection from './components/FavoritesSection.vue'
+import TagFilterBar from './components/TagFilterBar.vue'
+import ShortcutsHelp from './components/ShortcutsHelp.vue'
 import BackToTop from './components/BackToTop.vue'
+import ThemeSwitch from './components/ThemeSwitch.vue'
 import { useLinks } from './composables/useLinks.js'
 
 const { categories, allLinks, loading, error } = useLinks()
 const activeCat = ref('')
+const activeTag = ref('')
+const showHelp = ref(false)
+
+const filteredCount = computed(() => {
+  if (!activeTag.value) return 0
+  return allLinks.value.filter((l) => l.tag === activeTag.value).length
+})
 
 function jumpTo(id) {
   const el = document.getElementById('cat-' + id)
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
   activeCat.value = id
+}
+
+function onTag(t) {
+  activeTag.value = activeTag.value === t ? '' : t
+}
+
+function clearTag() {
+  activeTag.value = ''
 }
 
 function onScroll() {
@@ -72,18 +116,42 @@ function onScroll() {
   if (cur) activeCat.value = cur
 }
 
+function focusSearch() {
+  const input = document.querySelector('.search-wrap input')
+  if (input) {
+    input.focus()
+    input.closest('.search-wrap') &&
+      input
+        .closest('.search-wrap')
+        .scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+}
+
 function onKeydown(e) {
   const tag = (document.activeElement && document.activeElement.tagName) || ''
-  if (e.key === '/' && tag !== 'INPUT' && tag !== 'TEXTAREA') {
-    e.preventDefault()
-    const input = document.querySelector('.search-wrap input')
-    if (input) {
-      input.focus()
-      input.closest('.search-wrap') &&
-        input
-          .closest('.search-wrap')
-          .scrollIntoView({ behavior: 'smooth', block: 'start' })
+  const inField = tag === 'INPUT' || tag === 'TEXTAREA'
+
+  if (e.key === 'Escape') {
+    if (showHelp.value) {
+      showHelp.value = false
     }
+    return
+  }
+
+  if (e.code === 'Slash' && !inField) {
+    e.preventDefault()
+    if (e.shiftKey) {
+      showHelp.value = !showHelp.value
+    } else {
+      focusSearch()
+    }
+    return
+  }
+
+  if (!inField && /^[1-9]$/.test(e.key)) {
+    const idx = Number(e.key) - 1
+    const cat = categories.value[idx]
+    if (cat) jumpTo(cat.id)
   }
 }
 
@@ -98,6 +166,49 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+main {
+  padding-left: 0;
+}
+@media (min-width: 861px) {
+  main {
+    padding-left: 78px;
+  }
+}
+.help-btn {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 45;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  border: 1px solid var(--border-neon);
+  background: var(--panel);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: var(--neon-cyan);
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: 0 0 12px rgba(5, 217, 232, 0.25);
+  transition: all 0.2s ease;
+}
+.help-btn:hover {
+  border-color: var(--neon-pink);
+  color: var(--neon-pink);
+  box-shadow: 0 0 18px rgba(255, 42, 109, 0.4);
+  transform: translateY(-2px);
+}
+@media (max-width: 860px) {
+  .help-btn {
+    left: 12px;
+    bottom: 12px;
+    width: 40px;
+    height: 40px;
+  }
+}
 .error {
   text-align: center;
   padding: 60px 20px;

@@ -1,9 +1,11 @@
 <template>
   <section
+    v-if="filteredLinks.length"
     :id="'cat-' + cat.id"
     ref="el"
     class="section"
     :class="{ 'in-view': visible }"
+    :style="{ '--cc': cat.color }"
   >
     <div class="head">
       <div class="head-left">
@@ -13,24 +15,34 @@
           <p class="cat-sub">{{ cat.subtitle }}</p>
         </div>
       </div>
-      <span class="count">{{ cat.links.length }} NODES</span>
+      <span class="count">{{ filteredLinks.length }} NODES</span>
     </div>
     <div class="grid">
       <LinkCard
-        v-for="(link, i) in cat.links"
+        v-for="(link, i) in filteredLinks"
         :key="link.url + i"
         :link="link"
         :style="{ '--i': i }"
+        @tag="$emit('tag', $event)"
       />
     </div>
   </section>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import LinkCard from './LinkCard.vue'
 
-defineProps({ cat: { type: Object, required: true } })
+const props = defineProps({
+  cat: { type: Object, required: true },
+  activeTag: { type: String, default: '' },
+})
+defineEmits(['tag'])
+
+const filteredLinks = computed(() => {
+  if (!props.activeTag) return props.cat.links
+  return props.cat.links.filter((l) => l.tag === props.activeTag)
+})
 
 const el = ref(null)
 const visible = ref(false)
@@ -74,7 +86,7 @@ onUnmounted(() => {
   justify-content: space-between;
   margin-bottom: 22px;
   padding-bottom: 14px;
-  border-bottom: 1px solid rgba(5, 217, 232, 0.15);
+  border-bottom: 1px solid color-mix(in srgb, var(--cc, #05d9e8) 25%, transparent);
 }
 .head-left {
   display: flex;
@@ -83,8 +95,8 @@ onUnmounted(() => {
 }
 .cat-icon {
   font-size: 28px;
-  color: var(--neon-cyan);
-  text-shadow: 0 0 12px rgba(5, 217, 232, 0.6);
+  color: var(--cc, var(--neon-cyan));
+  text-shadow: 0 0 12px color-mix(in srgb, var(--cc, #05d9e8) 60%, transparent);
 }
 .cat-title {
   font-family: var(--font-display);
@@ -98,14 +110,15 @@ onUnmounted(() => {
   margin: 2px 0 0;
   font-family: var(--font-mono);
   font-size: 12px;
-  color: var(--neon-pink);
+  color: var(--cc, var(--neon-pink));
   letter-spacing: 2px;
+  opacity: 0.85;
 }
 .count {
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--text-dim);
-  border: 1px solid rgba(5, 217, 232, 0.25);
+  border: 1px solid color-mix(in srgb, var(--cc, #05d9e8) 30%, transparent);
   padding: 4px 12px;
   border-radius: 20px;
 }
@@ -115,8 +128,6 @@ onUnmounted(() => {
   gap: 14px;
 }
 
-/* 卡片入场动画：opacity 用 forwards 保持终态，transform 用 backwards 不保持，
-   避免 animation 覆盖 LinkCard 自身的 hover transform。 */
 .grid :deep(.card) {
   opacity: 0;
 }

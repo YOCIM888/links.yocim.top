@@ -13,6 +13,48 @@ function escapeReg(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
+const HISTORY_KEY = 'yocim-search-history'
+
+function loadHistory() {
+  try {
+    return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []
+  } catch {
+    return []
+  }
+}
+
+const history = ref(loadHistory())
+let histInited = false
+function initHistPersist() {
+  if (histInited) return
+  histInited = true
+  watch(
+    history,
+    (v) => {
+      try {
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(v))
+      } catch {
+        /* 忽略写入失败 */
+      }
+    },
+    { deep: true }
+  )
+}
+
+function recordHistory(q) {
+  const kw = (q || '').trim()
+  if (!kw) return
+  history.value = [kw, ...history.value.filter((h) => h !== kw)].slice(0, 8)
+}
+
+function removeHistory(q) {
+  history.value = history.value.filter((h) => h !== q)
+}
+
+function clearHistory() {
+  history.value = []
+}
+
 export function useSearch(allLinksRef) {
   const query = ref('')
   const results = ref([])
@@ -29,6 +71,7 @@ export function useSearch(allLinksRef) {
 
   function open(item) {
     if (!item) return
+    if (query.value) recordHistory(query.value)
     window.open(item.url, '_blank', 'noopener,noreferrer')
   }
 
@@ -89,5 +132,20 @@ export function useSearch(allLinksRef) {
     open(results.value[i])
   }
 
-  return { query, results, activeIndex, highlight, open, clear, onKeydown, select }
+  initHistPersist()
+
+  return {
+    query,
+    results,
+    activeIndex,
+    history,
+    highlight,
+    open,
+    clear,
+    onKeydown,
+    select,
+    recordHistory,
+    removeHistory,
+    clearHistory,
+  }
 }

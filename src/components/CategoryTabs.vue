@@ -26,18 +26,20 @@ defineEmits(['jump'])
   display: flex;
   gap: 8px;
   overflow-x: auto;
-  padding: 10px 6vw;
+  padding: 10px 4vw;
   scrollbar-width: thin;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
 }
 .tab {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 16px;
+  padding: 10px 16px;
   background: rgba(13, 18, 38, 0.6);
   border: 1px solid rgba(5, 217, 232, 0.2);
-  border-radius: 8px;
+  border-radius: 10px;
   color: var(--text-dim);
   font-family: var(--font-body);
   font-size: 14px;
@@ -46,6 +48,8 @@ defineEmits(['jump'])
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
+  scroll-snap-align: start;
+  min-height: 40px;
 }
 .tab i {
   color: var(--neon-cyan);
@@ -65,5 +69,11 @@ defineEmits(['jump'])
 }
 .tab.active i {
   color: var(--neon-pink);
+}
+/* 桌面端：隐藏顶部 tabs，由左侧 CategoryRail 接管 */
+@media (min-width: 861px) {
+  .tabs {
+    display: none;
+  }
 }
 </style>

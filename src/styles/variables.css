@@ -1,4 +1,5 @@
-:root {
+:root,
+[data-theme='neon'] {
   --bg-deep: #070713;
   --bg-deep-2: #0d0d20;
   --neon-pink: #ff2a6d;
@@ -12,10 +13,58 @@
   --panel-solid: #0d1226;
   --border-neon: rgba(5, 217, 232, 0.45);
   --border-pink: rgba(255, 42, 109, 0.45);
+  --bg-radial-top: #1a0b2e;
+  --bg-radial-end: #04040c;
+  --grid-line: rgba(5, 217, 232, 0.07);
+  --scanline-strength: 0.18;
+}
+
+[data-theme='midnight'] {
+  --bg-deep: #05080f;
+  --bg-deep-2: #0a1322;
+  --neon-pink: #4a9eff;
+  --neon-cyan: #00b4d8;
+  --neon-purple: #6c5ce7;
+  --neon-yellow: #ffd166;
+  --neon-green: #06d6a0;
+  --text-main: #cfe8ff;
+  --text-dim: #6a7a8a;
+  --panel: rgba(10, 19, 34, 0.78);
+  --panel-solid: #0a1322;
+  --border-neon: rgba(0, 180, 216, 0.42);
+  --border-pink: rgba(74, 158, 255, 0.42);
+  --bg-radial-top: #0a1a2e;
+  --bg-radial-end: #03060d;
+  --grid-line: rgba(0, 180, 216, 0.06);
+  --scanline-strength: 0.12;
+}
+
+[data-theme='minimal'] {
+  --bg-deep: #0a0a0a;
+  --bg-deep-2: #161616;
+  --neon-pink: #e8e8e8;
+  --neon-cyan: #a8a8a8;
+  --neon-purple: #888888;
+  --neon-yellow: #c8c8c8;
+  --neon-green: #989898;
+  --text-main: #ededed;
+  --text-dim: #6a6a6a;
+  --panel: rgba(22, 22, 22, 0.82);
+  --panel-solid: #161616;
+  --border-neon: rgba(168, 168, 168, 0.3);
+  --border-pink: rgba(232, 232, 232, 0.3);
+  --bg-radial-top: #1a1a1a;
+  --bg-radial-end: #050505;
+  --grid-line: rgba(168, 168, 168, 0.05);
+  --scanline-strength: 0.08;
+}
+
+:root {
   --radius: 10px;
   --font-display: 'Orbitron', 'Rajdhani', system-ui, sans-serif;
   --font-body: 'Rajdhani', 'JetBrains Mono', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -34,9 +83,26 @@ a { color: inherit; text-decoration: none; }
 
 ::selection { background: var(--neon-pink); color: #fff; }
 
+* {
+  scrollbar-color: var(--neon-cyan) var(--bg-deep-2);
+  scrollbar-width: thin;
+}
 ::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-track { background: var(--bg-deep-2); }
-::-webkit-scrollbar-thumb {
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-track:horizontal {
+  background: var(--bg-deep-2);
+}
+::-webkit-scrollbar-thumb,
+::-webkit-scrollbar-thumb:horizontal {
   background: linear-gradient(var(--neon-cyan), var(--neon-purple));
   border-radius: 6px;
+  border: 2px solid var(--bg-deep-2);
+}
+::-webkit-scrollbar-thumb:hover,
+::-webkit-scrollbar-thumb:horizontal:hover {
+  background: linear-gradient(var(--neon-pink), var(--neon-purple));
+}
+::-webkit-scrollbar-corner,
+::-webkit-scrollbar-corner:horizontal {
+  background: var(--bg-deep-2);
 }
